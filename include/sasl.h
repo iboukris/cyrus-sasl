@@ -860,6 +860,8 @@ typedef struct sasl_http_request {
 
 #define SASL_HTTP_REQUEST	22
 
+#define SASL_GSSAPI_CHANNEL_BINDING    23
+
 /* set property in SASL connection state
  * returns:
  *  SASL_OK       -- value set

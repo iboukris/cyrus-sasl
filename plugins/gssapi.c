@@ -58,6 +58,8 @@
 #include <gssapi/gssapi_ext.h>
 #endif
 
+#include <openssl/sha.h>
+
 #ifdef WIN32
 #  include <winsock2.h>
 
@@ -1662,6 +1664,8 @@ static int gssapi_client_mech_step(void *conn_context,
     input_token->value = NULL; 
     input_token->length = 0;
     gss_cred_id_t client_creds = (gss_cred_id_t)params->gss_creds;
+    gss_channel_bindings_t bindings = GSS_C_NO_CHANNEL_BINDINGS;
+    struct gss_channel_bindings_struct cbt = {0};
 
     if (clientout)
         *clientout = NULL;
@@ -1759,6 +1763,18 @@ static int gssapi_client_mech_step(void *conn_context,
 	    text->gss_ctx = GSS_C_NO_CONTEXT;
 	}
 
+	/* XXX */
+	if (params->gss_cbinding != NULL) {
+		const char prefix[] = "tls-server-end-point:";
+		uint8_t buffer[sizeof(prefix) -1  + SHA256_DIGEST_LENGTH];
+		memcpy(buffer, prefix, sizeof(prefix) -1);
+		SHA256(params->gss_cbinding->data, params->gss_cbinding->len,
+		       buffer + sizeof(prefix) -1);
+		cbt.application_data.length = sizeof(buffer);
+		cbt.application_data.value = buffer;
+		bindings = &cbt;
+	}
+
 	/* Setup req_flags properly */
 	req_flags = GSS_C_MUTUAL_FLAG | GSS_C_SEQUENCE_FLAG;
 	if (params->props.max_ssf > params->external_ssf) {
@@ -1785,7 +1801,7 @@ static int gssapi_client_mech_step(void *conn_context,
 					text->mech_type,
 					req_flags,
 					0,
-					GSS_C_NO_CHANNEL_BINDINGS,
+					bindings,
 					input_token,
 					NULL,
 					output_token,

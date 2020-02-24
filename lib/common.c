@@ -1297,6 +1297,16 @@ int sasl_setprop(sasl_conn_t *conn, int propnum, const void *value)
       break;
   }
 
+  case SASL_GSSAPI_CHANNEL_BINDING: {
+    const struct sasl_channel_binding *cb = (const struct sasl_channel_binding *)value;
+
+    if (conn->type == SASL_CONN_SERVER)
+        ((sasl_server_conn_t *)conn)->sparams->gss_cbinding = cb;
+    else
+        ((sasl_client_conn_t *)conn)->cparams->gss_cbinding = cb;
+    break;
+  }
+
   default:
       sasl_seterror(conn, 0, "Unknown parameter type");
       result = SASL_BADPARAM;
