@@ -117,11 +117,6 @@ if test "$gssapi" != no; then
 
   if test "$gss_impl" = "auto" -o "$gss_impl" = "mit"; then
     gss_failed=0
-    AC_CHECK_LIB(gssapi_krb5,gss_unwrap,gss_impl="mit",gss_failed=1,
-                 ${GSSAPIBASE_LIBS} -lgssapi_krb5 -lkrb5 -lk5crypto -lcom_err ${LIB_SOCKET})
-    if test "$gss_impl" != "auto" -a "$gss_failed" = "1"; then
-      gss_impl="failed"
-    fi
   fi
 
   # For Cybersafe one has to set a platform define in order to make compilation work
