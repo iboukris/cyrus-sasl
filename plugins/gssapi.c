@@ -202,9 +202,10 @@ typedef struct context {
 
 enum {
     SASL_GSSAPI_STATE_AUTHNEG = 1,
-    SASL_GSSAPI_STATE_SSFCAP = 2,
-    SASL_GSSAPI_STATE_SSFREQ = 3,
-    SASL_GSSAPI_STATE_AUTHENTICATED = 4
+    SASL_GSSAPI_STATE_SERVER_ACK = 2,
+    SASL_GSSAPI_STATE_SSFCAP = 3,
+    SASL_GSSAPI_STATE_SSFREQ = 4,
+    SASL_GSSAPI_STATE_AUTHENTICATED = 5
 };
 
 #define LAYER_CONFIDENTIALITY	4
@@ -1981,11 +1982,23 @@ static int gssapi_client_mech_step(void *conn_context,
                 return gssapi_spnego_ssf(text, &params->props, oparams);
             }
 
-	    /* Switch to ssf negotiation */
-	    text->state = SASL_GSSAPI_STATE_SSFCAP;
+	    if (serverinlen != 0) {
+		/* Switch to ssf negotiation */
+		text->state = SASL_GSSAPI_STATE_SSFCAP;
+            } else {
+		/* If we got GSS_S_COMPLETE on the first call then we first then
+		 * we still expect an empty reply from the server. */
+		text->state = SASL_GSSAPI_STATE_SERVER_ACK;
+	    }
 	}
-	
+
 	return SASL_CONTINUE;
+
+    case SASL_GSSAPI_STATE_SERVER_ACK: {
+	text->state = SASL_GSSAPI_STATE_SSFCAP;
+	/* Ok, now switch to ssf negotiation */
+	return (serverinlen == 0) ? SASL_CONTINUE : SASL_FAIL;
+    }
 
     case SASL_GSSAPI_STATE_SSFCAP: {
 	sasl_security_properties_t *secprops = &(params->props);
@@ -1994,7 +2007,7 @@ static int gssapi_client_mech_step(void *conn_context,
 	char serverhas, mychoice;
 	sasl_ssf_t mech_ssf;
 	int ret;
-	
+
 	real_input_token.value = (void *) serverin;
 	real_input_token.length = serverinlen;
 	
